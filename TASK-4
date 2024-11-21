@@ -1,0 +1,51 @@
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Load the image
+image_path = "path_to_image.jpg"  # Replace with your image path
+image = cv2.imread(image_path)
+
+# Convert to grayscale
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# Apply Gaussian Blur (optional, helps reduce noise)
+blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+# Threshold the image
+_, thresholded = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY_INV)
+
+# Perform morphological operations (optional, refine objects)
+kernel = np.ones((3, 3), np.uint8)
+cleaned = cv2.morphologyEx(thresholded, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+# Find contours
+contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+# Draw contours and count objects
+output_image = image.copy()
+cv2.drawContours(output_image, contours, -1, (0, 255, 0), 2)
+
+# Display the number of objects
+num_objects = len(contours)
+print(f"Number of objects detected: {num_objects}")
+
+# Display the results
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 3, 1)
+plt.title("Original Image")
+plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+plt.axis("off")
+
+plt.subplot(1, 3, 2)
+plt.title("Thresholded Image")
+plt.imshow(thresholded, cmap="gray")
+plt.axis("off")
+
+plt.subplot(1, 3, 3)
+plt.title("Objects Detected")
+plt.imshow(cv2.cvtColor(output_image, cv2.COLOR_BGR2RGB))
+plt.axis("off")
+
+plt.tight_layout()
+plt.show()
