@@ -1,0 +1,63 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from sklearn.preprocessing import StandardScaler
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Load the dataset
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+df = pd.read_csv(url, sep=";")
+
+# Quick overview of the dataset
+print(df.info())
+print(df.describe())
+
+# Check for missing values
+print("Missing values:\n", df.isnull().sum())
+
+# Correlation heatmap
+plt.figure(figsize=(10, 6))
+sns.heatmap(df.corr(), annot=True, cmap='coolwarm')
+plt.title("Feature Correlation")
+plt.show()
+
+# Splitting features and target
+X = df.drop("quality", axis=1)
+y = df["quality"]
+
+# Categorize wine quality into three classes: Low, Medium, High
+y = y.apply(lambda x: 'Low' if x <= 4 else 'Medium' if x <= 6 else 'High')
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+
+# Feature scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Train a RandomForestClassifier
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+
+# Feature importance
+importance = model.feature_importances_
+feature_names = df.drop("quality", axis=1).columns
+importance_df = pd.DataFrame({"Feature": feature_names, "Importance": importance}).sort_values(by="Importance", ascending=False)
+
+# Plot feature importance
+plt.figure(figsize=(8, 6))
+sns.barplot(x="Importance", y="Feature", data=importance_df, palette="viridis")
+plt.title("Feature Importance")
+plt.show()
