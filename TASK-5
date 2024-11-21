@@ -1,0 +1,92 @@
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+import matplotlib.pyplot as plt
+
+# Load the dataset
+# Use TensorFlow's `image_dataset_from_directory` if the dataset is stored locally
+data_dir = "path_to_cats_and_dogs_dataset"  # Replace with your dataset path
+batch_size = 32
+img_size = (150, 150)
+
+train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    data_dir,
+    validation_split=0.2,
+    subset="training",
+    seed=123,
+    image_size=img_size,
+    batch_size=batch_size
+)
+
+val_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    data_dir,
+    validation_split=0.2,
+    subset="validation",
+    seed=123,
+    image_size=img_size,
+    batch_size=batch_size
+)
+
+# Normalize pixel values to [0, 1]
+def preprocess_image(image, label):
+    return tf.cast(image / 255.0, tf.float32), label
+
+train_ds = train_ds.map(preprocess_image)
+val_ds = val_ds.map(preprocess_image)
+
+# Improve performance with prefetching
+train_ds = train_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
+val_ds = val_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
+
+# Data augmentation
+data_augmentation = tf.keras.Sequential([
+    tf.keras.layers.RandomFlip("horizontal"),
+    tf.keras.layers.RandomRotation(0.1),
+    tf.keras.layers.RandomZoom(0.1),
+])
+
+# Build the CNN model
+model = Sequential([
+    data_augmentation,
+    Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D((2, 2)),
+    Conv2D(128, (3, 3), activation='relu'),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
+    Dense(1, activation='sigmoid')  # Binary classification: cat (0) or dog (1)
+])
+
+# Compile the model
+model.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['accuracy']
+)
+
+# Train the model
+history = model.fit(
+    train_ds,
+    validation_data=val_ds,
+    epochs=10
+)
+
+# Evaluate the model
+loss, accuracy = model.evaluate(val_ds)
+print(f"Validation Accuracy: {accuracy * 100:.2f}%")
+
+# Plot training and validation accuracy
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Training and Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
+
+# Save the model
+model.save("cats_vs_dogs_cnn.h5")
